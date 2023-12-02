@@ -22,7 +22,16 @@ void Connection::handle(Channel &channel, FileDescriptor fd, sockaddr_in socket)
     // 1. Register new connection by adding them to the default room
     channel.add_client(&client);
 
-    // 2. Listen to incoming messages from the client and write them to the channel
+    // 2. Prompt the client to change their username
+    do
+    {
+        channel.message("SERVER", "please use the /user command to select a username", &client);
+        channel.message("SERVER", "syntax: /user <username> <hostname> <servername> <realname>", &client);
+        read(client.fd, message, MAX_MESSAGE_LENGTH);
+    } while (Command::user(&channel, &client, message) != CommandError::Success);
+    
+    
+    // 3. Listen to incoming messages from the client and write them to the channel
     while (not client.exit and (nread = read(client.fd, message, MAX_MESSAGE_LENGTH)) > 0)
     {
         if (message[0] == '/')
@@ -31,11 +40,11 @@ void Connection::handle(Channel &channel, FileDescriptor fd, sockaddr_in socket)
         }
         else
         {
-            channel.message(&client, message);
+            channel.message(client.username, message, nullptr);
         }
     }
 
-    // 3. Register closed connection by removing the them from the channel
+    // 4. Register closed connection by removing the them from the channel
     channel.remove_client(&client);
 
     errchk( close(client.fd), "close" );

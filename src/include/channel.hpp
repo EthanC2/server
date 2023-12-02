@@ -16,7 +16,7 @@ struct Channel final
     Channel(const char *name_);
     void add_client(Client *client);
     void remove_client(Client *client);
-    void message(Client *client, const char *message);
+    void message(const char *sender, const char *message, Client *recipient);
 
     /* Make Channel objects non-copyable */
     Channel() = delete;

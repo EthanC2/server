@@ -1,25 +1,75 @@
 #include <string.h>
 
+#include <unistd.h>
+
+#include "include/constants.hpp"
 #include "include/command.hpp"
 
-void Command::execute(Channel *channel, Client *client, char *buffer)
+static const char *WHITESPACE = " \t\v\f\r\n";
+
+CommandError Command::execute(Channel *channel, Client *client, char *buffer)
 {
-    const char *WHITESPACE = " \t\v\f\r\n";
     const char *command = strsep(&buffer, WHITESPACE) ?: "<null>";
-    const char *args = buffer;
+    char *args = buffer;
 
     printf("[COMMAND] user \"%s\" on channel \"%s\" executed \"%s\" with args \"%s\"\n", client->username, channel->name, command, args ?: "<null>");
 
     if (strcmp(command, "quit") == 0)
     {
-        Command::quit(channel, client, args);
+        return Command::quit(channel, client, args);
     }
+    else if (strcmp(command, "user") == 0)
+    {
+        return Command::user(channel, client, args);
+    }
+
+    return CommandError::Unknown;
 }
 
-void Command::quit(Channel *channel, Client *client, const char *args)
+CommandError Command::user(Channel *channel, Client *client, char *buffer)
 {
-    const char *message = args ?: "left the server";
+    const char *_ = strsep(&buffer, WHITESPACE);
+    const char *username = strsep(&buffer, WHITESPACE);
+    const char *hostname = strsep(&buffer, WHITESPACE);
+    const char *server_name = strsep(&buffer, WHITESPACE);
+    const char *real_name = strsep(&buffer, WHITESPACE);
+    char response[2*MAX_USER_NAME];
 
-    channel->message(client, message);
+    printf("[COMMAND | USER] username: %s, hostname: %s, server_name: %s, real_name: %s", username, hostname, server_name, real_name);
+
+    if (username == nullptr or hostname == nullptr or server_name == nullptr or real_name == nullptr)
+    {
+        const char *errmsg = Command::error_message(CommandError::MissingParameters);
+        channel->message("SERVER", errmsg, client);
+        return CommandError::MissingParameters;
+    }
+
+    printf("[COMMAND | USER] \"%s\" set their username to \"%s\"\n", client->username, username);
+    snprintf(response, 2*MAX_USER_NAME, "succsessfully changed username to \"%s\"", username);
+    channel->message("SERVER", response, client);
+
+    strncpy(client->username, username, MAX_USER_NAME);
+    return CommandError::Success;
+}
+
+CommandError Command::quit(Channel *channel, Client *client, const char *args)
+{
+    const char *message = args ?: "a user left the server";
+
+    channel->message("SERVER", message, nullptr);
     client->exit = true;
+
+    return CommandError::Success;
+}
+
+const char *Command::error_message(CommandError error)
+{
+    static const char *error_messages[] = {
+        [static_cast<int>(CommandError::Success)] = "error: success",
+        [static_cast<int>(CommandError::MissingParameters)] = "error: missing parameters",
+        [static_cast<int>(CommandError::UsernameAlreadyExists)] = "error: username already exists",
+        [static_cast<int>(CommandError::Unknown)] = "error: unknown error"
+    };
+
+    return error_messages[static_cast<int>(error)];
 }

@@ -14,7 +14,7 @@ Channel::Channel(const char *name_)
     strncpy(name, name_, MAX_CHANNEL_NAME);
 }
 
-void Channel::message(Client *client, const char *message)
+void Channel::message(const char *sender, const char *message, Client *recipient)
 {
     std::lock_guard<std::mutex> lock(mutex);
     char buffer[2*MAX_MESSAGE_LENGTH];
@@ -28,15 +28,23 @@ void Channel::message(Client *client, const char *message)
     strftime(time_buffer, sizeof(time_buffer), "%I:%M %p", time_struct);
 
     // 2. Create formatted message: "[<USERNAME> | <TIME>]: <MESSAGE>"
-    snprintf(buffer, 2*MAX_MESSAGE_LENGTH, "[%s | %s]: %s", client->username, time_buffer, message);
+    snprintf(buffer, 2*MAX_MESSAGE_LENGTH, "[%s | %s]: %s", sender, time_buffer, message);
     const size_t buflen = strlen(buffer) + 1;
 
     // 3. Write message to all clients (including sender)
-    printf("[READ MESSAGE] user \"%s\" on channel \"%s\": \"%s\"\n", client->username, name, buffer);
-    for (Client *channel_member : clients)
+    printf("[READ MESSAGE] user \"%s\" on channel \"%s\": \"%s\"\n", sender, name, buffer);
+    if (recipient != nullptr)
     {
-        printf("[WRITE MESSAGE] user \"%s\" => user \"%s\" on channel \"%s\": \"%s\"\n", client->username, channel_member->username, name, buffer);
-        write(channel_member->fd, buffer, buflen);
+            printf("[WRITE MESSAGE] user \"%s\" => user \"%s\" on channel \"%s\": \"%s\"\n", sender, recipient->username, name, buffer);
+            write(recipient->fd, buffer, buflen);
+    }
+    else
+    {
+        for (Client *channel_member : clients)
+        {
+            printf("[WRITE MESSAGE] user \"%s\" => user \"%s\" on channel \"%s\": \"%s\"\n", sender, channel_member->username, name, buffer);
+            write(channel_member->fd, buffer, buflen);
+        }
     }
 }
 
