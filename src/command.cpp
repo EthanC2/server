@@ -7,7 +7,7 @@
 
 static const char *WHITESPACE = " \t\v\f\r\n";
 
-CommandError Command::execute(Channel *channel, Client *client, char *buffer)
+CommandError Command::execute(Channel *channel, std::unordered_set<std::string> *usernames, std::mutex *usernames_mutex, Client *client, char *buffer)
 {
     const char *command = strsep(&buffer, WHITESPACE) ?: "<null>";
     char *args = buffer;
@@ -20,14 +20,15 @@ CommandError Command::execute(Channel *channel, Client *client, char *buffer)
     }
     else if (strcmp(command, "user") == 0)
     {
-        return Command::user(channel, client, args);
+        return Command::user(channel, usernames, usernames_mutex, client, args);
     }
 
     return CommandError::Unknown;
 }
 
-CommandError Command::user(Channel *channel, Client *client, char *buffer)
+CommandError Command::user(Channel *channel, std::unordered_set<std::string> *usernames, std::mutex *usernames_mutex, Client *client, char *buffer)
 {
+    std::lock_guard<std::mutex> lock(*usernames_mutex);
     const char *_ = strsep(&buffer, WHITESPACE);
     const char *username = strsep(&buffer, WHITESPACE);
     const char *hostname = strsep(&buffer, WHITESPACE);
@@ -44,11 +45,21 @@ CommandError Command::user(Channel *channel, Client *client, char *buffer)
         return CommandError::MissingParameters;
     }
 
+    if (usernames->find(std::string(username)) != usernames->end())
+    {
+        const char *errmsg = Command::error_message(CommandError::UsernameAlreadyExists);
+        channel->message("SERVER", errmsg, client);
+        return CommandError::UsernameAlreadyExists;
+    }
+
     printf("[COMMAND | USER] \"%s\" set their username to \"%s\"\n", client->username, username);
-    snprintf(response, 2*MAX_USER_NAME, "succsessfully changed username to \"%s\"", username);
+    snprintf(response, 2*MAX_USER_NAME, "successfully changed username to \"%s\"", username);
     channel->message("SERVER", response, client);
 
+    usernames->erase(std::string(username));
     strncpy(client->username, username, MAX_USER_NAME);
+    usernames->insert(std::string(username));
+
     return CommandError::Success;
 }
 

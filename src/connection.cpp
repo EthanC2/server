@@ -1,3 +1,5 @@
+#include <string>
+#include <unordered_set>
 #include <algorithm>
 #include <mutex>
 
@@ -13,7 +15,7 @@
 #include "include/client.hpp"
 #include "include/error.hpp"
 
-void Connection::handle(Channel &channel, FileDescriptor fd, sockaddr_in socket)
+void Connection::handle(Channel &channel, std::unordered_set<std::string> &usernames, std::mutex &usernames_mutex, FileDescriptor fd, sockaddr_in socket)
 {
     Client client(fd, socket);
     char message[MAX_MESSAGE_LENGTH];
@@ -28,7 +30,7 @@ void Connection::handle(Channel &channel, FileDescriptor fd, sockaddr_in socket)
         channel.message("SERVER", "please use the /user command to select a username", &client);
         channel.message("SERVER", "syntax: /user <username> <hostname> <servername> <realname>", &client);
         read(client.fd, message, MAX_MESSAGE_LENGTH);
-    } while (Command::user(&channel, &client, message) != CommandError::Success);
+    } while (Command::user(&channel, &usernames, &usernames_mutex, &client, message) != CommandError::Success);
     
     
     // 3. Listen to incoming messages from the client and write them to the channel
@@ -36,7 +38,7 @@ void Connection::handle(Channel &channel, FileDescriptor fd, sockaddr_in socket)
     {
         if (message[0] == '/')
         {
-            Command::execute(&channel, &client, message + 1);
+            Command::execute(&channel, &usernames, &usernames_mutex, &client, message + 1);
         }
         else
         {

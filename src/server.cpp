@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cstdlib>
+#include <string>
 #include <vector>
+#include <unordered_set>
 #include <thread>
 
 #include <unistd.h>
@@ -17,6 +19,8 @@ int main()
 {
     Channel channel("default channel");
     std::vector<std::thread> clients;
+    std::unordered_set<std::string> usernames { "SERVER" };
+    std::mutex usernames_mutex;
     sockaddr_in server_address, client_address;
     socklen_t client_length = sizeof(client_address);
     int listen_fd, connection_fd;
@@ -39,7 +43,7 @@ int main()
     for (;;)
     {
         errchk( connection_fd = accept(listen_fd, (sockaddr*) &client_address, &client_length), "accept");
-        clients.push_back( std::thread(Connection::handle, std::ref(channel), connection_fd, client_address) );
+        clients.push_back( std::thread(Connection::handle, std::ref(channel), std::ref(usernames), std::ref(usernames_mutex), connection_fd, client_address) );
     }
 
     // 5. Wait for clients to disconnect before exiting
