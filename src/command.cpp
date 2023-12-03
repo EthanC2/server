@@ -36,28 +36,42 @@ CommandError Command::user(Database *database, Channel *channel, Client *client,
     const char *hostname = strsep(&buffer, WHITESPACE);
     const char *server_name = strsep(&buffer, WHITESPACE);
     const char *real_name = strsep(&buffer, WHITESPACE);
-    char response[2*MAX_USER_NAME];
+    char response[MAXLEN_MESSAGE];
 
     printf("[DEBUG | COMMAND | USER] username: %s, hostname: %s, server_name: %s, real_name: %s\n", username, hostname, server_name, real_name);
-
+    
+    // 1. Validate that all required arguments were provided
     if (username == nullptr or hostname == nullptr or server_name == nullptr or real_name == nullptr)
     {
         channel->message("SERVER", Command::error_message(CommandError::MissingParameters), client);
         return CommandError::MissingParameters;
     }
 
+    // 2. Validate that username is not too long
+    if (strlen(username) > MAXLEN_USER_NAME)
+    {
+        channel->message("SERVER", Command::error_message(CommandError::UsernameTooLong), client);
+        return CommandError::UsernameTooLong;
+    }
+
+    // 3. Validate that the username does not already exist
     if (database->contains_username(username))
     {
         channel->message("SERVER", Command::error_message(CommandError::UsernameAlreadyExists), client);
         return CommandError::UsernameAlreadyExists;
     }
 
+    // 4. Log that the client's username was updated
     printf("[COMMAND | USER] \"%s\" set their username to \"%s\"\n", client->username, username);
-    snprintf(response, 2*MAX_USER_NAME, "successfully changed username to \"%s\"", username);
+    snprintf(response, sizeof(response), "successfully changed username to \"%s\"", username);
     channel->message("SERVER", response, client);
 
+    // 5. Change the client's identification info
     database->remove_username(client->username);
-    strncpy(client->username, username, MAX_USER_NAME);
+    strncpy(client->username, username, MAXLEN_USER_NAME);
+    strncpy(client->hostname, hostname, MAXLEN_HOST_NAME);
+    strncpy(client->server_name, server_name, MAXLEN_SERVER_NAME);
+    strncpy(client->real_name, real_name, MAXLEN_REAL_NAME);
     database->add_username(username);
 
     return CommandError::Success;
@@ -85,6 +99,7 @@ const char *Command::error_message(CommandError error)
         [static_cast<int>(CommandError::Success)] = "error: success",
         [static_cast<int>(CommandError::MissingParameters)] = "error: missing parameters",
         [static_cast<int>(CommandError::UsernameAlreadyExists)] = "error: username already exists",
+        [static_cast<int>(CommandError::UsernameTooLong)] = "error: username too long (max length: 9 characters)",
         [static_cast<int>(CommandError::Unknown)] = "error: unknown error"
     };
 

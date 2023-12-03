@@ -13,10 +13,11 @@ enum class CommandError
     Success,
     MissingParameters,
     UsernameAlreadyExists,
+    UsernameTooLong,
     Unknown,
 };
 
-class Command
+class Command final
 {
     public:
         static CommandError execute(Database *database, Channel *channel, Client *client, char *buffer);

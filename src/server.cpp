@@ -19,11 +19,11 @@
 int main()
 {
     Database database;
-    Channel channel("chatroom");
+    Channel channel("#chatroom");
     std::vector<std::thread> clients;
     sockaddr_in server_address, client_address;
     socklen_t client_length = sizeof(client_address);
-    int listen_fd, connection_fd;
+    FileDescriptor listen_fd, connection_fd;
 
     // 1. Create a socket
     errchk( listen_fd = socket(AF_INET, SOCK_STREAM, 0), "socket");

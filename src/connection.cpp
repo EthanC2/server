@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include <cstdio>
+
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -20,7 +21,7 @@
 void Connection::handle(Database &database, Channel &channel, FileDescriptor fd, sockaddr_in socket)
 {
     Client client(fd, socket);
-    char message[MAX_MESSAGE_LENGTH];
+    char message[MAXLEN_MESSAGE];
     ssize_t nread;
 
     // 1. Register new connection by adding them to the default room
@@ -31,20 +32,39 @@ void Connection::handle(Database &database, Channel &channel, FileDescriptor fd,
     {
         channel.message("SERVER", "please use the /user command to select a username", &client);
         channel.message("SERVER", "syntax: /user <username> <hostname> <servername> <realname>", &client);
-        read(client.fd, message, MAX_MESSAGE_LENGTH);
+        read(client.fd, message, sizeof(message));
     } while (Command::user(&database, &channel, &client, message) != CommandError::Success);
     
     
     // 3. Listen to incoming messages from the client and write them to the channel
-    while (not client.exit and (nread = read(client.fd, message, MAX_MESSAGE_LENGTH)) > 0)
+    while (not client.exit)
     {
-        if (Command::is_command(message))
+        nread = read(client.fd, message, sizeof(message));
+
+        if (nread <= 0)
         {
-            Command::execute(&database, &channel, &client, message + 1);
+            if (nread == 0)
+            {
+                snprintf(message, sizeof(message), "user \"%s\" has disconnected", client.username);
+            }
+            else
+            {
+                snprintf(message, sizeof(message), "forced disconnect for user \"%s\": %s", client.username, strerror(errno));
+            }
+
+            channel.remove_client(&client);
+            Command::quit(&database, &channel, &client, message);
         }
         else
         {
-            channel.message(client.username, message, nullptr);
+            if (Command::is_command(message))
+            {
+                Command::execute(&database, &channel, &client, message + 1);
+            }
+            else
+            {
+                channel.message(client.username, message, nullptr);
+            }
         }
     }
 

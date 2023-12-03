@@ -6,9 +6,12 @@
 
 #include "constants.hpp"
 
-struct Client
+struct Client final
 {
-    char username[MAX_USER_NAME];
+    char username[MAXLEN_USER_NAME];
+    char hostname[MAXLEN_HOST_NAME];
+    char server_name[MAXLEN_SERVER_NAME];
+    char real_name[MAXLEN_REAL_NAME];
     const sockaddr_in socket;
     const FileDescriptor fd;
     bool exit;

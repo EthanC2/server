@@ -10,5 +10,5 @@
 Client::Client(FileDescriptor fd_, sockaddr_in socket_): socket(socket_), fd(fd_)
 {
     exit = false;
-    snprintf(username, MAX_USER_NAME, "client-%d", fd);
+    snprintf(username, MAXLEN_USER_NAME, "client-%d", fd);
 }

@@ -10,7 +10,7 @@
 struct Channel final
 {
     std::vector<Client*> clients;
-    char name[MAX_CHANNEL_NAME];
+    char name[MAXLEN_CHANNEL_NAME];
     std::mutex mutex;
 
     Channel(const char *name_);
