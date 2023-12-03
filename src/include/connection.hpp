@@ -7,10 +7,11 @@
 #include <arpa/inet.h>
 
 #include "constants.hpp"
+#include "database.hpp"
 #include "channel.hpp"
 
 class Connection final
 {
     public:
-        static void handle(Channel &channel, std::unordered_set<std::string> &usernames, std::mutex &usernames_mutex, FileDescriptor fd, sockaddr_in socket);
+        static void handle(Database &database, Channel &channel, FileDescriptor fd, sockaddr_in socket);
 };

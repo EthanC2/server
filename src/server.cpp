@@ -13,14 +13,14 @@
 #include "include/error.hpp"
 #include "include/constants.hpp"
 #include "include/connection.hpp"
+#include "include/database.hpp"
 #include "include/channel.hpp"
 
 int main()
 {
-    Channel channel("default channel");
+    Database database;
+    Channel channel("chatroom");
     std::vector<std::thread> clients;
-    std::unordered_set<std::string> usernames { "SERVER" };
-    std::mutex usernames_mutex;
     sockaddr_in server_address, client_address;
     socklen_t client_length = sizeof(client_address);
     int listen_fd, connection_fd;
@@ -43,7 +43,7 @@ int main()
     for (;;)
     {
         errchk( connection_fd = accept(listen_fd, (sockaddr*) &client_address, &client_length), "accept");
-        clients.push_back( std::thread(Connection::handle, std::ref(channel), std::ref(usernames), std::ref(usernames_mutex), connection_fd, client_address) );
+        clients.push_back( std::thread(Connection::handle, std::ref(database), std::ref(channel), connection_fd, client_address) );
     }
 
     // 5. Wait for clients to disconnect before exiting

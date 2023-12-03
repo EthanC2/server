@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <mutex>
 
+#include "database.hpp"
 #include "channel.hpp"
 #include "client.hpp"
 
@@ -18,8 +19,9 @@ enum class CommandError
 class Command
 {
     public:
-        [[nodiscard]] static CommandError execute(Channel *channel, std::unordered_set<std::string> *usernames, std::mutex *usernames_mutex, Client *client, char *buffer);
-        [[nodiscard]] static CommandError user(Channel *channel, std::unordered_set<std::string> *usernames, std::mutex *usernames_mutex, Client *client, char *buffer);
-        [[nodiscard]] static CommandError quit(Channel *chanel, Client *client, const char *args);
+        static CommandError execute(Database *database, Channel *channel, Client *client, char *buffer);
+        [[nodiscard]] static CommandError user(Database *database, Channel *channel, Client *client, char *buffer);
+        [[nodiscard]] static CommandError quit(Database *database, Channel *chanel, Client *client, const char *args);
+        static bool is_command(const char *message);
         static const char *error_message(CommandError error);
 };

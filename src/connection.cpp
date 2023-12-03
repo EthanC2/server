@@ -12,10 +12,12 @@
 #include "include/constants.hpp"
 #include "include/connection.hpp"
 #include "include/command.hpp"
+#include "include/database.hpp"
+#include "include/channel.hpp"
 #include "include/client.hpp"
 #include "include/error.hpp"
 
-void Connection::handle(Channel &channel, std::unordered_set<std::string> &usernames, std::mutex &usernames_mutex, FileDescriptor fd, sockaddr_in socket)
+void Connection::handle(Database &database, Channel &channel, FileDescriptor fd, sockaddr_in socket)
 {
     Client client(fd, socket);
     char message[MAX_MESSAGE_LENGTH];
@@ -30,15 +32,15 @@ void Connection::handle(Channel &channel, std::unordered_set<std::string> &usern
         channel.message("SERVER", "please use the /user command to select a username", &client);
         channel.message("SERVER", "syntax: /user <username> <hostname> <servername> <realname>", &client);
         read(client.fd, message, MAX_MESSAGE_LENGTH);
-    } while (Command::user(&channel, &usernames, &usernames_mutex, &client, message) != CommandError::Success);
+    } while (Command::user(&database, &channel, &client, message) != CommandError::Success);
     
     
     // 3. Listen to incoming messages from the client and write them to the channel
     while (not client.exit and (nread = read(client.fd, message, MAX_MESSAGE_LENGTH)) > 0)
     {
-        if (message[0] == '/')
+        if (Command::is_command(message))
         {
-            Command::execute(&channel, &usernames, &usernames_mutex, &client, message + 1);
+            Command::execute(&database, &channel, &client, message + 1);
         }
         else
         {
