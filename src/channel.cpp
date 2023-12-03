@@ -6,8 +6,8 @@
 
 #include <unistd.h>
 
-#include "include/channel.hpp"
 #include "include/constants.hpp"
+#include "include/channel.hpp"
 
 Channel::Channel(const char *name_) 
 {

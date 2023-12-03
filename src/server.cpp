@@ -19,7 +19,6 @@
 int main()
 {
     Database database;
-    Channel channel("#chatroom");
     std::vector<std::thread> clients;
     sockaddr_in server_address, client_address;
     socklen_t client_length = sizeof(client_address);
@@ -43,7 +42,7 @@ int main()
     for (;;)
     {
         errchk( connection_fd = accept(listen_fd, (sockaddr*) &client_address, &client_length), "accept");
-        clients.push_back( std::thread(Connection::handle, std::ref(database), std::ref(channel), connection_fd, client_address) );
+        clients.push_back( std::thread(Connection::handle, &database, connection_fd, client_address) );
     }
 
     // 5. Wait for clients to disconnect before exiting

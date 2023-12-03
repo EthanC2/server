@@ -7,8 +7,6 @@
 #include "include/channel.hpp"
 #include "include/command.hpp"
 
-static const char *WHITESPACE = " \t\v\f\r\n";
-
 CommandError Command::execute(Database *database, Channel *channel, Client *client, char *buffer)
 {
     const char *command = strsep(&buffer, WHITESPACE) ?: "<null>";
@@ -25,7 +23,7 @@ CommandError Command::execute(Database *database, Channel *channel, Client *clie
         return Command::quit(database, channel, client, args);
     }
 
-    channel->message("SERVER", Command::error_message(CommandError::Unknown), client);
+    channel->message(SERVER_USERNAME, Command::error_message(CommandError::Unknown), client);
     return CommandError::Unknown;
 }
 
@@ -43,28 +41,28 @@ CommandError Command::user(Database *database, Channel *channel, Client *client,
     // 1. Validate that all required arguments were provided
     if (username == nullptr or hostname == nullptr or server_name == nullptr or real_name == nullptr)
     {
-        channel->message("SERVER", Command::error_message(CommandError::MissingParameters), client);
+        channel->message(SERVER_USERNAME, Command::error_message(CommandError::MissingParameters), client);
         return CommandError::MissingParameters;
     }
 
     // 2. Validate that username is not too long
     if (strlen(username) > MAXLEN_USER_NAME)
     {
-        channel->message("SERVER", Command::error_message(CommandError::UsernameTooLong), client);
+        channel->message(SERVER_USERNAME, Command::error_message(CommandError::UsernameTooLong), client);
         return CommandError::UsernameTooLong;
     }
 
     // 3. Validate that the username does not already exist
     if (database->contains_username(username))
     {
-        channel->message("SERVER", Command::error_message(CommandError::UsernameAlreadyExists), client);
+        channel->message(SERVER_USERNAME, Command::error_message(CommandError::UsernameAlreadyExists), client);
         return CommandError::UsernameAlreadyExists;
     }
 
     // 4. Log that the client's username was updated
     printf("[COMMAND | USER] \"%s\" set their username to \"%s\"\n", client->username, username);
     snprintf(response, sizeof(response), "successfully changed username to \"%s\"", username);
-    channel->message("SERVER", response, client);
+    channel->message(SERVER_USERNAME, response, client);
 
     // 5. Change the client's identification info
     database->remove_username(client->username);
@@ -81,7 +79,7 @@ CommandError Command::quit(Database *database, Channel *channel, Client *client,
 {
     const char *message = args ?: "a user left the server";
 
-    channel->message("SERVER", message, nullptr);
+    channel->message(SERVER_USERNAME, message, nullptr);
     database->remove_username(client->username);
     client->exit = true;
 

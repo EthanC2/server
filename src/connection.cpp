@@ -18,22 +18,24 @@
 #include "include/client.hpp"
 #include "include/error.hpp"
 
-void Connection::handle(Database &database, Channel &channel, FileDescriptor fd, sockaddr_in socket)
+void Connection::handle(Database *database, FileDescriptor fd, sockaddr_in socket)
 {
+    Channel *channel = database->get_channel(DEFAULT_CHANNEL_NAME);
     Client client(fd, socket);
     char message[MAXLEN_MESSAGE];
     ssize_t nread;
 
     // 1. Register new connection by adding them to the default room
-    channel.add_client(&client);
+    channel->add_client(&client);
 
     // 2. Prompt the client to change their username
     do
     {
-        channel.message("SERVER", "please use the /user command to select a username", &client);
-        channel.message("SERVER", "syntax: /user <username> <hostname> <servername> <realname>", &client);
+        channel->message(SERVER_USERNAME, "please use the /user command to select a username", &client);
+        channel->message(SERVER_USERNAME, "syntax: /user <username> <hostname> <servername> <realname>", &client);
+        channel->message(SERVER_USERNAME, "note: all commands are prefixed with a forward slash.", &client);
         read(client.fd, message, sizeof(message));
-    } while (Command::user(&database, &channel, &client, message) != CommandError::Success);
+    } while (Command::user(database, channel, &client, message) != CommandError::Success);
     
     
     // 3. Listen to incoming messages from the client and write them to the channel
@@ -45,31 +47,31 @@ void Connection::handle(Database &database, Channel &channel, FileDescriptor fd,
         {
             if (nread == 0)
             {
-                snprintf(message, sizeof(message), "user \"%s\" has disconnected", client.username);
+                snprintf(message, sizeof(message), "EOF: user \"%s\" has disconnected", client.username);
             }
             else
             {
-                snprintf(message, sizeof(message), "forced disconnect for user \"%s\": %s", client.username, strerror(errno));
+                snprintf(message, sizeof(message), "erroneous disconnect for user \"%s\": %s", client.username, strerror(errno));
             }
 
-            channel.remove_client(&client);
-            Command::quit(&database, &channel, &client, message);
+            channel->remove_client(&client);
+            Command::quit(database, channel, &client, message);
         }
         else
         {
             if (Command::is_command(message))
             {
-                Command::execute(&database, &channel, &client, message + 1);
+                Command::execute(database, channel, &client, message + 1);
             }
             else
             {
-                channel.message(client.username, message, nullptr);
+                channel->message(client.username, message, nullptr);
             }
         }
     }
 
     // 4. Register closed connection by removing the them from the channel
-    channel.remove_client(&client);
+    channel->remove_client(&client);
 
     errchk( close(client.fd), "close" );
 }

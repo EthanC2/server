@@ -13,5 +13,5 @@
 class Connection final
 {
     public:
-        static void handle(Database &database, Channel &channel, FileDescriptor fd, sockaddr_in socket);
+        static void handle(Database *database, FileDescriptor fd, sockaddr_in socket);
 };
